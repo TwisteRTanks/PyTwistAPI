@@ -1,5 +1,6 @@
 import socket
 from json import dumps, loads
+from uuid import uuid4
 
 
 class Connection(object):
@@ -7,22 +8,25 @@ class Connection(object):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.addres = (ip, port,)
         self.id = None
+        self.key = uuid4().hex
 
-    def connect(self) -> int:
+    def connect(self):
         request = {
             "request": "connect",
-            "client_data": {}
+            "client_data": {
+                "key": self.key,
+                "id": None
+            }
         }
         self.socket.sendto(dumps(request).encode(), self.addres)
         self.id = loads(self.socket.recv(1024).decode())['response']
 
-        print(self.id)
-
     @property
     def online(self):
         request = {
-            "request": "push_data",
+            "request": "get_online",
             "client_data": {
-                "id": 832,
             }
         }
+        self.socket.sendto(dumps(request).encode(), self.addres)
+        return loads(self.socket.recv(1024))['response']
