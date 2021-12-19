@@ -10,6 +10,8 @@ class Connection(object):
         self.id = None
         self.key = uuid4().hex
 
+    def disconnect(): ...
+
     def connect(self):
         request = {
             "request": "connect",
@@ -19,7 +21,13 @@ class Connection(object):
             }
         }
         self.socket.sendto(dumps(request).encode(), self.addres)
-        self.id = loads(self.socket.recv(1024).decode())['response']
+
+        resp = loads(self.socket.recv(1024))
+        print(resp)
+        if resp['status'] == -1:
+            raise ConnectionError("ooops!")
+
+        self.id = resp['response']
 
     @property
     def online(self):
@@ -29,4 +37,10 @@ class Connection(object):
             }
         }
         self.socket.sendto(dumps(request).encode(), self.addres)
-        return loads(self.socket.recv(1024))['response']
+
+        resp = loads(self.socket.recv(1024))
+
+        if resp['status'] == -1:
+            raise ConnectionError("ooops!")
+
+        return resp['response']
