@@ -43,7 +43,7 @@ class Connection(object):
         self.socket.sendto(dumps(request).encode(), self.addres)
 
         resp = loads(self.socket.recv(1024))
-
+        print(resp)
         self.status_dispatcher(resp['status'])
 
         self.id = resp['response']
