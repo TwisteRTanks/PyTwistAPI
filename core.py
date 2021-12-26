@@ -20,7 +20,9 @@ class Connection(object):
     def status_dispatcher(status: int) -> Union[int, None]:
         do = {
 
+
             -127: ServerError("Unknown error!"),
+            -  3: ServerError("Invalid packet"),
             - 21: ServerError("Connection is corrupted. Invalid key"),
             - 20: ServerError("Connection is corruped. Invalid id"),
             - 1:  ServerError("Maximum connected clients to server")
@@ -77,3 +79,32 @@ class Connection(object):
         # The status does not need to be handled.
 
         return resp['response']
+
+    def get_data(self):
+        request = {
+            "request": "get_data",
+            "client_data": {}
+        }
+        self.socket.sendto(dumps(request).encode(), self.addres)
+
+        resp = loads(self.socket.recv(1024))
+        return resp
+
+    def push_data(self, posx, posy, rot, turret_rot):
+        request = {
+            "request": "push_data",
+            "request_body": {
+                "posx": posx,
+                "posy": posy,
+                "rot": rot,
+                "turret_rot": turret_rot
+            },
+            "client_data": {
+                "id": self.id,
+                "key": self.key
+            }
+        }
+        self.socket.sendto(dumps(request).encode(), self.addres)
+
+        resp = loads(self.socket.recv(1024))
+        return resp
