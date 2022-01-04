@@ -1,7 +1,9 @@
-import socket
 from json import dumps, loads
 from uuid import uuid4
 from typing import Union
+import socket
+
+from codes import Status
 
 
 class ServerError(Exception):
@@ -21,11 +23,14 @@ class Connection(object):
         do = {
 
 
-            -127: ServerError("Unknown error!"),
-            -  3: ServerError("Invalid packet"),
-            - 21: ServerError("Connection is corrupted. Invalid key"),
-            - 20: ServerError("Connection is corruped. Invalid id"),
-            - 1:  ServerError("Maximum connected clients to server")
+            Status.unknown: ServerError("Unknown error!"),
+            Status.ipacket: ServerError("Invalid packet"),
+            Status.ikey:    ServerError("Connection is corrupted. Invalid key"),
+            Status.iid:     ServerError("Connection is corruped. Invalid id"),
+            Status.mconns_error: ServerError(
+                "Maximum connected clients to server"
+            ),
+            Status.permission_denied: PermissionError("permission denied")
 
         }
 
@@ -49,6 +54,8 @@ class Connection(object):
         self.status_dispatcher(resp['status'])
 
         self.id = resp['response']
+
+
 
     def disconnect(self):
         request = {
@@ -88,6 +95,7 @@ class Connection(object):
         self.socket.sendto(dumps(request).encode(), self.addres)
 
         resp = loads(self.socket.recv(1024))
+        self.status_dispatcher(resp['status'])
         return resp
 
     def push_data(self, posx, posy, rot, turret_rot):
@@ -107,4 +115,5 @@ class Connection(object):
         self.socket.sendto(dumps(request).encode(), self.addres)
 
         resp = loads(self.socket.recv(1024))
+        self.status_dispatcher(resp['status'])
         return resp
