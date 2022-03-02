@@ -93,10 +93,21 @@ class Connection(object):
             "client_data": {}
         }
         self.socket.sendto(dumps(request).encode(), self.addres)
-
+        
         resp = loads(self.socket.recv(1024))
         self.status_dispatcher(resp['status'])
-        return resp
+        return resp["response"]
+
+    def get_map(self):
+        request = {
+            "request": "get_map",
+            "client_data": {}
+        }
+        self.socket.sendto(dumps(request).encode(), self.addres)
+        
+        resp = loads(self.socket.recv(1024))
+        self.status_dispatcher(resp['status'])
+        return resp["response"]
 
     def push_data(self, posx, posy, rot, turret_rot):
         request = {
