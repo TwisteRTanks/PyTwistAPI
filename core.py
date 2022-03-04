@@ -1,10 +1,11 @@
 from json import dumps, loads
 from uuid import uuid4
 from typing import Union
-import socket
+from hashlib import md5
 
 from codes import Status
 
+import socket
 
 class ServerError(Exception):
     def __init__(self, *args, **kwargs):
@@ -15,6 +16,7 @@ class Connection(object):
     def __init__(self, ip, port=9265):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.addres = (ip, port,)
+        self.max_map_packet_size = 1048576
         self.id = None
         self.key = uuid4().hex
 
@@ -98,16 +100,23 @@ class Connection(object):
         self.status_dispatcher(resp['status'])
         return resp["response"]
 
-    def get_map(self):
+    def get_map(self) -> bytearray:
         request = {
             "request": "get_map",
             "client_data": {}
         }
         self.socket.sendto(dumps(request).encode(), self.addres)
         
-        resp = loads(self.socket.recv(1024))
+        resp = loads(self.socket.recv(self.max_map_packet_size))
+
         self.status_dispatcher(resp['status'])
-        return resp["response"]
+        
+        map = bytearray(resp["response"]["map"])
+
+        if resp["response"]["checksum"] != md5(bytes(map)).hexdigest():
+            raise TypeError("checksum is invalid")
+
+        return map
 
     def push_data(self, posx, posy, rot, turret_rot):
         request = {
