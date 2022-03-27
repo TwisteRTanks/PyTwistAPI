@@ -2,6 +2,7 @@ from json import dumps, loads
 from uuid import uuid4
 from typing import Union
 from hashlib import md5
+from time import time
 
 from codes import Status
 
@@ -118,7 +119,25 @@ class Connection(object):
 
         return map
 
+    def ping(self) -> int:
+        request = {
+            "request": "ping",
+            "client_data": {
+            }
+        }
+        
+        S1 = time()
+        
+        self.socket.sendto(dumps(request).encode(), self.addres)
+        resp = loads(self.socket.recv(1024))
+        
+        exc_time_ms = round((time() - S1) * 1000)
+        
+        self.status_dispatcher(resp['status'])
+        return exc_time_ms
+    
     def push_data(self, posx, posy, rot, turret_rot):
+        
         request = {
             "request": "push_data",
             "request_body": {
