@@ -1,31 +1,29 @@
 from json import dumps, loads
 from uuid import uuid4
-from typing import Union
+from typing import List, Optional, Tuple, Union
 from hashlib import md5
 from time import time
 
 from codes import Status
+from udpsocket import UdpSocket
+from base_types import * 
 
-import socket
 
 class ServerError(Exception):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-
 class Connection(object):
     def __init__(self, ip, port=9265):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.addres = (ip, port,)
-        self.max_map_packet_size = 1048576
-        self.id = None
+        self.socket: UdpSocket = UdpSocket()
+        self.addres: Tuple[str, int] = (ip, port,)
+        self.max_map_packet_size: int = 1048576
+        self.id: Optional[int] = None
         self.key = uuid4().hex
 
     @staticmethod
-    def status_dispatcher(status: int) -> Union[int, None]:
+    def status_dispatcher(status: int) -> int:
         do = {
-
-
             Status.unknown: ServerError("Unknown error!"),
             Status.ipacket: ServerError("Invalid packet"),
             Status.ikey:    ServerError("Connection is corrupted. Invalid key"),
@@ -34,22 +32,25 @@ class Connection(object):
                 "Maximum connected clients to server"
             ),
             Status.permission_denied: PermissionError("permission denied")
-
         }
-
         if status < 0:
             raise do[status]
 
-        return status
+        return status   
 
-    def connect(self):
+    def connect(self) -> None:
         request = {
             "request": "connect",
             "client_data": {
                 "key": self.key,
-                "id": None
-            }
+                "id": None,
+                "addres": [],
+                "client_timeout_ms": 0,
+            },
+            "player_data": {},
+            "request_body": {}
         }
+
         self.socket.sendto(dumps(request).encode(), self.addres)
 
         resp = loads(self.socket.recv(1024))
@@ -58,28 +59,31 @@ class Connection(object):
 
         self.id = resp['response']
 
-
-
-    def disconnect(self):
+    def disconnect(self) -> None:
         request = {
             "request": "disconnect",
             "client_data": {
                 "key": self.key,
-                "id": self.id
-            }
+                "id": self.id,
+                "addres": [],
+                "client_timeout_ms": -1
+            },
+            "player_data": {},
+            "request_body": {}
         }
 
         self.socket.sendto(dumps(request).encode(), self.addres)
 
         resp = loads(self.socket.recv(1024))
-        print(resp)
         self.status_dispatcher(resp['status'])
 
     @property
-    def online(self):
+    def online(self) -> int:
         request = {
             "request": "get_online",
-            "client_data": {}
+            "client_data": {},
+            "player_data": {},
+            "request_body": {}
         }
         self.socket.sendto(dumps(request).encode(), self.addres)
 
@@ -90,10 +94,12 @@ class Connection(object):
 
         return resp['response']
 
-    def get_data(self):
+    def get_data(self) -> Union[List[ClientData], List[ClientDataNullKeys]]:
         request = {
             "request": "get_data",
-            "client_data": {}
+            "client_data": {},
+            "player_data": {},
+            "request_body": {},
         }
         self.socket.sendto(dumps(request).encode(), self.addres)
         
@@ -101,10 +107,12 @@ class Connection(object):
         self.status_dispatcher(resp['status'])
         return resp["response"]
 
-    def get_map(self) -> bytearray:
+    def get_map(self) -> Map:
         request = {
             "request": "get_map",
-            "client_data": {}
+            "client_data": {},
+            "player_data": {},
+            "request_body:": {}
         }
         self.socket.sendto(dumps(request).encode(), self.addres)
         
@@ -122,8 +130,9 @@ class Connection(object):
     def ping(self) -> int:
         request = {
             "request": "ping",
-            "client_data": {
-            }
+            "client_data": {},
+            "player_data": {},
+            "request_body": {}
         }
         
         S1 = time()
@@ -136,23 +145,24 @@ class Connection(object):
         self.status_dispatcher(resp['status'])
         return exc_time_ms
     
-    def push_data(self, posx, posy, rot, turret_rot):
+    def push_data(self, posx, posy, rot, turret_rot) -> None:
         
         request = {
             "request": "push_data",
-            "request_body": {
+            "client_data": {
+                "id": self.id,
+                "key": self.key,
+                "client_timeout_ms": self.ping()
+            },
+            "player_data": {
                 "posx": posx,
                 "posy": posy,
                 "rot": rot,
                 "turret_rot": turret_rot
             },
-            "client_data": {
-                "id": self.id,
-                "key": self.key
-            }
+            "request_body": {}
         }
         self.socket.sendto(dumps(request).encode(), self.addres)
 
         resp = loads(self.socket.recv(1024))
         self.status_dispatcher(resp['status'])
-        return resp
