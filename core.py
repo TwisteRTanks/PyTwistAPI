@@ -209,3 +209,22 @@ class Connection(object):
         resp = loads(self.socket.recv(1024))
         self.status_dispatcher(resp['status'])
         return resp['response']
+    
+    def clear_chat(self) -> None:
+        request = {
+            "request": "clear_chat",
+            "client_data": {
+                "key": self.key,
+                "id": self.id,
+                "addres": [],
+                "client_timeout_ms": self.ping()
+            },
+            "player_data": {},
+            "request_body": {}
+        }
+
+        self.socket.sendto(dumps(request).encode(), self.addres)
+
+        resp = loads(self.socket.recv(1024))
+        self.status_dispatcher(resp['status'])
+        return resp['response']
