@@ -1,4 +1,5 @@
 from json import dumps, loads
+from urllib import request
 from uuid import uuid4
 from typing import List, Optional, Tuple, Union
 from hashlib import md5
@@ -145,7 +146,7 @@ class Connection(object):
         self.status_dispatcher(resp['status'])
         return exc_time_ms
     
-    def push_data(self, posx, posy, rot, turret_rot) -> None:
+    def push_data(self, posx: int, posy: int, rot: Union[int, float], turret_rot: Union[int, float]) -> None:
         
         request = {
             "request": "push_data",
@@ -166,3 +167,45 @@ class Connection(object):
 
         resp = loads(self.socket.recv(1024))
         self.status_dispatcher(resp['status'])
+
+    def push_message(self, msg_conent: str, nick: str) -> None:
+        request = {
+            "request": "push_message",
+            "client_data": {
+                "key": self.key,
+                "id": self.id,
+                "addres": [],
+                "client_timeout_ms": self.ping()
+            },
+            "player_data": {},
+            "request_body": {
+                "msg_content": msg_conent,
+                "nick": nick
+            }
+        }
+        
+        self.socket.sendto(dumps(request).encode(), self.addres)
+
+        resp = loads(self.socket.recv(1024))
+        self.status_dispatcher(resp['status'])
+        # return resp['response']
+    
+    def get_messages(self) -> List[list[str, str]]:
+        request = {
+            "request": "get_messages",
+            "client_data": {
+                "key": self.key,
+                "id": self.id,
+                "addres": [],
+                "client_timeout_ms": self.ping()
+            },
+            "player_data": {},
+            "request_body": {}
+
+        }
+
+        self.socket.sendto(dumps(request).encode(), self.addres)
+
+        resp = loads(self.socket.recv(1024))
+        self.status_dispatcher(resp['status'])
+        return resp['response']
