@@ -27,6 +27,7 @@ class Connection(object):
         do = {
             Status.unknown: ServerError("Unknown error!"),
             Status.ipacket: ServerError("Invalid packet"),
+            Status.already_conn: ServerError("Client already connected"),
             Status.ikey:    ServerError("Connection is corrupted. Invalid key"),
             Status.iid:     ServerError("Connection is corruped. Invalid id"),
             Status.mconns_error: ServerError(
